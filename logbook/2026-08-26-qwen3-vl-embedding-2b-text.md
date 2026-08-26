@@ -58,3 +58,63 @@ python convert/smoke_embedder.py    # the control, first
 python convert/convert_text.py      # float32 + parity
 python convert/quantize_text.py     # float16 and int8 + parity
 ```
+
+---
+
+# Addendum, same day — latency, and it reverses the recommendation
+
+The conversion is correct. On this hardware it is also the wrong runtime, and
+the numbers are not close.
+
+Same machine, same probes (seed 11), 3 warmup and 12 timed iterations, 8
+threads, batch of one, 128 tokens.
+
+| runtime | p50 ms | p95 ms | emb/s | vs best |
+| --- | --- | --- | --- | --- |
+| **torch float16 MPS** | **102.6** | 103.4 | **9.7** | **1.00x** |
+| torch float32 MPS | 104.3 | 105.1 | 9.6 | 0.98x |
+| torch float32 CPU | 376.8 | 409.8 | 2.7 | 0.27x |
+| LiteRT int8 dynamic (CPU) | 415.7 | 420.6 | 2.4 | 0.25x |
+| LiteRT float16 (CPU) | 1004.6 | 1013.9 | 1.0 | 0.10x |
+| LiteRT float32 (CPU) | 1060.3 | 2312.1 | 0.9 | 0.10x |
+
+**torch on MPS is 9.8x faster than the LiteRT float16 build**, and LiteRT loses
+to torch even on CPU, where int8 — the only competitive LiteRT variant — is
+still 10% behind and pays 0.0023 mean cosine for the privilege.
+
+## Why, and what is not yet ruled out
+
+`ai_edge_litert.gpu` raises `ImportError` on the macOS arm64 wheel. The
+`Delegate` and `load_delegate` symbols exist, but no Metal delegate ships in
+the wheel, so **LiteRT here is CPU-and-XNNPACK only in practice**, while torch
+reaches the GPU through MPS. That is the whole gap.
+
+This is a caveat on the result, not a rescue of it. `litert-community`'s own
+Qwen3-Embedding-0.6B artifact is named `qwen3emb_gpu_fp16.tflite` and was
+benchmarked on a Pixel's Tensor G3 GPU, so the fast path plainly exists on
+platforms whose delegate ships. It does not ship for macOS in the current
+wheel. Until it does, the measured comparison stands.
+
+## What this changes
+
+**The default embedding runtime becomes torch on MPS under `pythonx`, not
+LiteRT.** That satisfies the same rule LM Studio failed: it is declared in
+`convert/pyproject.toml`, pinned to exact versions, and reproducible.
+
+**The LiteRT artifact is kept and published anyway**, for three honest reasons
+and no dishonest ones: nobody had converted any Qwen3-VL-Embedding, so the
+recipe is worth existing; it is a single hashable file with no Python runtime
+at all; and it is the fallback if the MPS path breaks or the Metal delegate
+lands. It is not kept because it is fast, because it is not.
+
+**Nothing architectural has to change**, which was the point of putting a port
+in front of the model. The adapter set is unchanged; only which one is default
+moves.
+
+## The general lesson, recorded
+
+LiteRT entered this project on a speed argument for TimesFM, was moved to a
+privacy argument for embeddings, and the privacy argument is the one that
+survived contact with a measurement. Privacy is satisfied by any local runtime,
+including torch. So LiteRT's remaining seat here is portability and packaging —
+narrower than either argument that put it on the list.
