@@ -61,3 +61,12 @@ node_modules/
 # Editor and OS
 .DS_Store
 .vscode/
+
+# Converted model artifacts. Weights are not source, and the smallest useful
+# one here is 1.61 GB. Convert them with convert/, or fetch them from the
+# release that records their hashes.
+*.tflite
+*.litertlm
+*.safetensors
+qwen3vl*/
+.venv/

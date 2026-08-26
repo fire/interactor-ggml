@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+# One Python environment for this app, declared here so the runtime that
+# produced a vector can be named and rebuilt. RFD 1135.
+[project]
+name = "fsm-litert-convert"
+version = "0.1.0"
+requires-python = "==3.12.*"
+dependencies = [
+  "litert-torch==0.9.4",
+  "ai-edge-litert==2.2.0",
+  "torch==2.13.0",
+  "transformers==5.16.1",
+  "numpy==2.5.2",
+  "huggingface-hub",
+  "accelerate",
+]
