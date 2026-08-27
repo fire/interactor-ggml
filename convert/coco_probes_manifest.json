@@ -1,0 +1,72 @@
+[
+ {
+  "image_id": 86,
+  "file": "000000000086.jpg",
+  "license_id": 7,
+  "w": 512,
+  "h": 640
+ },
+ {
+  "image_id": 165,
+  "file": "000000000165.jpg",
+  "license_id": 4,
+  "w": 640,
+  "h": 536
+ },
+ {
+  "image_id": 370,
+  "file": "000000000370.jpg",
+  "license_id": 4,
+  "w": 480,
+  "h": 640
+ },
+ {
+  "image_id": 436,
+  "file": "000000000436.jpg",
+  "license_id": 4,
+  "w": 427,
+  "h": 640
+ },
+ {
+  "image_id": 459,
+  "file": "000000000459.jpg",
+  "license_id": 4,
+  "w": 516,
+  "h": 640
+ },
+ {
+  "image_id": 529,
+  "file": "000000000529.jpg",
+  "license_id": 4,
+  "w": 427,
+  "h": 640
+ },
+ {
+  "image_id": 542,
+  "file": "000000000542.jpg",
+  "license_id": 7,
+  "w": 640,
+  "h": 484
+ },
+ {
+  "image_id": 544,
+  "file": "000000000544.jpg",
+  "license_id": 4,
+  "w": 640,
+  "h": 427
+ },
+ {
+  "image_id": 693,
+  "file": "000000000693.jpg",
+  "license_id": 4,
+  "w": 640,
+  "h": 428
+ },
+ {
+  "image_id": 723,
+  "file": "000000000723.jpg",
+  "license_id": 4,
+  "w": 359,
+  "h": 640
+ }
+]
