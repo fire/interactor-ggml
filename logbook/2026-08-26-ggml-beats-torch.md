@@ -125,3 +125,68 @@ is not a measurement.
 - Fork #18665 onto current master and finish it. That is the original
   instruction, and it was right.
 - Text embeddings are unaffected: cosine 0.999997, 29.9 ms, 1.71x torch.
+
+---
+
+# Second addendum — the vision path works; the previous addendum was my bug
+
+The addendum above says images are silently dropped and that PR #18665 is "the
+wiring". **Both wrong, and the error was mine.**
+
+`image_data` is a `/completion` field. The embeddings endpoint takes
+`multimodal_data`:
+
+```json
+{"input": {"prompt_string": "…<__media__>…", "multimodal_data": ["<base64>"]}}
+```
+
+`tokenize_input_subprompt` in `server-common.cpp` has handled this the whole
+time, and `handle_embeddings_impl` already passes `mctx` through. Reading the
+source settled in minutes what two rounds of reading forum comments got wrong
+in both directions.
+
+## What is actually true
+
+| input | cosine vs torch |
+| --- | --- |
+| text | 0.999997 mean, 0.999995 min |
+| image | **0.967420** mean, 0.951388 min |
+
+Images produce distinct, meaningful vectors — two different images score 0.146
+against each other. The vision tower is genuinely used. But 0.967 is not
+0.9999, and for retrieval that gap is real.
+
+**`corr(pixels, cosine) = +0.730`** across the sample: larger images agree
+better. That points at **image preprocessing** — resize and interpolation
+between `Qwen3VLImageProcessor` and llama.cpp's clip path — not at the weights
+or the fusion. Worth a narrower experiment: feed pre-resized images at the
+model's native grid and see whether the gap closes.
+
+## Where that leaves PR #18665
+
+Back to the original reading: it adds the OpenAI-style
+`input: [{"type":"image_url"}]` schema, which currently returns HTTP 500. A
+convenience, not the wiring. Forked to `fire/interactor-llama-cpp` anyway; the
+branch is 2,983 commits behind master and the draft carries two real defects —
+a dangling `if (!ctx_server.mctx)` with no body that swallows the following
+statement, and an `auto inputs` in the else branch that shadows the outer
+vector. Neither was ever finished.
+
+## The actual lesson, which is not the one I drew last time
+
+Last time I concluded "someone else's impression is not a measurement" and then
+made a *worse* error: I measured the wrong thing and trusted my own bad
+measurement over two people's correct reports. A measurement of the wrong call
+is not evidence either.
+
+What separated signal from noise both times was **reading the source**. The
+forum told me it worked; my first test said it did not; the source said which
+of them was right and why. Sixty lines of `server-common.cpp` outranked
+everything else in this entry.
+
+## Standing footgun, worth reporting upstream
+
+`image_data` on `/v1/embeddings` is accepted without error and ignored. Every
+image then returns the identical text-only vector. Invisible without a
+reference to compare against — the same silent-failure class as omitting
+`--pooling last`.
